@@ -1,0 +1,269 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Multi-Type Balatro Calculator</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            line-height: 1.6;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            background-color: white;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+            padding: 20px;
+            margin-bottom: 20px;
+        }
+        .section {
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            padding: 15px;
+            margin-bottom: 15px;
+        }
+        .section-title {
+            font-weight: bold;
+            margin-bottom: 10px;
+            padding-bottom: 5px;
+            border-bottom: 1px solid #eee;
+        }
+        .form-row {
+            display: flex;
+            margin-bottom: 10px;
+            align-items: center;
+        }
+        .form-row label {
+            width: 120px;
+            margin-right: 10px;
+        }
+        .form-row input {
+            width: 80px;
+            padding: 5px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+        }
+        button {
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            padding: 10px 15px;
+            border-radius: 4px;
+            cursor: pointer;
+            margin-right: 10px;
+        }
+        button:hover {
+            background-color: #45a049;
+        }
+        .results {
+            white-space: pre-wrap;
+            font-family: monospace;
+            background-color: #f8f8f8;
+            padding: 15px;
+            border-radius: 5px;
+            border: 1px solid #ddd;
+            max-height: 300px;
+            overflow-y: auto;
+        }
+        .types-container {
+            max-height: 400px;
+            overflow-y: auto;
+            padding-right: 10px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Multi-Type Balatro Calculator</h1>
+        
+        <div class="section">
+            <div class="section-title">Base Values</div>
+            <div class="form-row">
+                <label for="base-chips">Base Chips:</label>
+                <input type="number" id="base-chips" value="100">
+            </div>
+            <div class="form-row">
+                <label for="base-mult">Base Multiplier:</label>
+                <input type="number" id="base-mult" value="15">
+            </div>
+        </div>
+        
+        <div class="section">
+            <div class="section-title">Type Management</div>
+            <div class="form-row">
+                <label for="num-types">Number of Types:</label>
+                <input type="number" id="num-types" value="2" min="1" max="10">
+                <button id="create-types-btn" style="margin-left: 10px;">Create Type Fields</button>
+            </div>
+        </div>
+        
+        <div class="types-container" id="types-container">
+            <!-- Type sections will be generated here -->
+        </div>
+        
+        <div class="section">
+            <button id="calculate-btn">Calculate</button>
+            <div class="results" id="results"></div>
+        </div>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // Get references to DOM elements
+            const numTypesInput = document.getElementById('num-types');
+            const createTypesBtn = document.getElementById('create-types-btn');
+            const typesContainer = document.getElementById('types-container');
+            const calculateBtn = document.getElementById('calculate-btn');
+            const resultsDiv = document.getElementById('results');
+            const baseChipsInput = document.getElementById('base-chips');
+            const baseMultInput = document.getElementById('base-mult');
+            
+            // Create type fields
+            function createTypeFields() {
+                // Clear previous type fields
+                typesContainer.innerHTML = '';
+                
+                // Get number of types
+                const numTypes = parseInt(numTypesInput.value);
+                if (isNaN(numTypes) || numTypes < 1) {
+                    resultsDiv.textContent = 'Please enter a valid number for types (minimum 1)';
+                    return;
+                }
+                
+                // Create sections for each type
+                for (let i = 0; i < numTypes; i++) {
+                    const typeSection = document.createElement('div');
+                    typeSection.className = 'section';
+                    typeSection.innerHTML = `
+                        <div class="section-title">Type ${i+1}</div>
+                        <div class="form-row">
+                            <label>Type Value:</label>
+                            <input type="number" class="type-value" value="1.5" step="0.1">
+                        </div>
+                        <div class="form-row">
+                            <label>Triggers:</label>
+                            <input type="number" class="triggers" value="3">
+                        </div>
+                        <div class="form-row">
+                            <label>Modifiers:</label>
+                            <input type="number" class="modifiers" value="2">
+                        </div>
+                        <div class="form-row">
+                            <label>Cards:</label>
+                            <input type="number" class="cards" value="5">
+                        </div>
+                    `;
+                    typesContainer.appendChild(typeSection);
+                }
+            }
+            
+            // Format number to use scientific notation if > 99,999,999,999
+            function formatNumber(number) {
+                if (number > 99999999999) {
+                    return number.toExponential(4);
+                } else {
+                    return number.toFixed(2);
+                }
+            }
+            
+            // Calculate results
+            function calculate() {
+                try {
+                    // Clear result text
+                    resultsDiv.textContent = '';
+                    
+                    // Get base values
+                    const chips = parseFloat(baseChipsInput.value);
+                    const mult = parseFloat(baseMultInput.value);
+                    
+                    if (isNaN(chips) || isNaN(mult)) {
+                        resultsDiv.textContent = 'Please enter valid numbers for Base Chips and Base Multiplier';
+                        return;
+                    }
+                    
+                    // Get all type sections
+                    const typeSections = typesContainer.querySelectorAll('.section');
+                    
+                    // Calculate result for each type
+                    const typeResults = [];
+                    const calculationSteps = [];
+                    
+                    typeSections.forEach((section, i) => {
+                        // Get values for this type
+                        const typeVal = parseFloat(section.querySelector('.type-value').value);
+                        const trigs = parseFloat(section.querySelector('.triggers').value);
+                        const mods = parseFloat(section.querySelector('.modifiers').value);
+                        const cards = parseFloat(section.querySelector('.cards').value);
+                        
+                        if (isNaN(typeVal) || isNaN(trigs) || isNaN(mods) || isNaN(cards)) {
+                            throw new Error(`Invalid number in Type ${i+1}`);
+                        }
+                        
+                        // Calculate for this type: ((type)^(trigs*mods))^(cards)
+                        const innerPower = trigs * mods;
+                        const innerResult = Math.pow(typeVal, innerPower);
+                        const typeResult = Math.pow(innerResult, cards);
+                        
+                        typeResults.push(typeResult);
+                        
+                        // Record calculation steps
+                        const step = 
+                            `Type ${i+1} calculation:\n` +
+                            `  Step 1: ${typeVal}^(${trigs}*${mods}) = ${typeVal}^${innerPower} = ${formatNumber(innerResult)}\n` +
+                            `  Step 2: ${formatNumber(innerResult)}^${cards} = ${formatNumber(typeResult)}\n`;
+                        calculationSteps.push(step);
+                    });
+                    
+                    // Multiply all type results together
+                    let combinedTypeResult = 1;
+                    for (const result of typeResults) {
+                        combinedTypeResult *= result;
+                    }
+                    
+                    // Calculate final result
+                    const finalResult = combinedTypeResult * mult * chips;
+                    
+                    // Format the formula
+                    let formula = '';
+                    for (let i = 0; i < typeSections.length; i++) {
+                        if (i > 0) {
+                            formula += '*';
+                        }
+                        formula += `(((type${i+1})^(trigs${i+1}*mods${i+1}))^(cards${i+1}))`;
+                    }
+                    formula += '*(mult)*(chips)';
+                    
+                    // Display formula and results
+                    let output = `Formula: ${formula}\n\n`;
+                    
+                    // Add each type calculation
+                    for (const step of calculationSteps) {
+                        output += step + '\n';
+                    }
+                    
+                    // Add final steps
+                    output += `Combined type result: ${formatNumber(combinedTypeResult)}\n\n`;
+                    output += `Final calculation: ${formatNumber(combinedTypeResult)} * ${mult} * ${chips} = ${formatNumber(finalResult)}\n\n`;
+                    output += `Final chips: ${formatNumber(finalResult)}`;
+                    
+                    resultsDiv.textContent = output;
+                    
+                } catch (error) {
+                    resultsDiv.textContent = `Error in calculation: ${error.message}`;
+                }
+            }
+            
+            // Add event listeners
+            createTypesBtn.addEventListener('click', createTypeFields);
+            calculateBtn.addEventListener('click', calculate);
+            
+            // Initialize with default type fields
+            createTypeFields();
+        });
+    </script>
+</body>
+</html>
